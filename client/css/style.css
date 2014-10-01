@@ -1,0 +1,35 @@
+/** Fonts - begin */
+@font-face {
+    src: url('/fonts/InputMonoCompressed-Black.eot');
+    src: url('/fonts/InputMonoCompressed-Black.eot') format("embedded-opentype"),
+    url('/fonts/InputMonoCompressed-Black.woff') format("woff"),
+    url('/fonts/InputMonoCompressed-Black.ttf') format("opentype"),
+    url('/fonts/InputMonoCompressed-Black.svg#web') format("svg");
+    font-family: 'Input Mono Compressed';
+    font-style: normal;
+    font-weight: normal;
+}
+/** Fonts - end */
+
+body{
+    background: black;
+    color: white;
+    font-family: "Input Mono Compressed", "ZeroWidth", monospace !important;
+}
+
+.messages {
+    display: block;
+    padding: 5px 10px;
+    border: 1px solid #999999;
+}
+
+.messages p{
+    font-size: 0.8rem;
+    margin: 0 0 0.2rem 0;
+}
+
+.messages .time{
+
+    font-size: 0.7rem;
+    color: #ccc;
+}

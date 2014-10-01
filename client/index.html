@@ -2,12 +2,13 @@
 <html>
 <head>
     <link href='http://fonts.googleapis.com/css?family=Ubuntu&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+    <link href="/css/style.css" rel="stylesheet">
     <meta charset="UTF-8">
 </head>
 <body>
-    <output id="messages"></output>
+    <output class="messages" id="output"></output>
     <div>
-        <div contenteditable id="input"></div>
+        <div contenteditable id="input" class="messages"></div>
     </div>
 <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 <script type="text/javascript">
@@ -30,14 +31,20 @@
         var $input = $(this);
         var text = $input.text();
         $input.text('');
-        RESClient.send(JSON.stringify({type: 'message', data: {text: text}}));
+        RESClient.send({type: 'message', data: {text: text}});
     });
 
     var Chat = {
         onMessage: function(message, dataObject){
-            console.log(message, dataObject);
-            var html = 'Server: ' + message + '<br>';
-            $('#messages').html($('#messages').html() + html);
+            console.log('Received message: ', message, dataObject);
+            var event = JSON.parse(message.data);
+            if (event && event.type && event.type == 'message'){
+                var $output = $('#output');
+                var html = 'Server: ' + event.data.text + '<br>';
+                $output.html($output.html() + html);
+            } else {
+                console.log('System event received: ', event);
+            }
         }
     };
 
