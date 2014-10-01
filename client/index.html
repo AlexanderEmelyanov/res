@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href='http://fonts.googleapis.com/css?family=Ubuntu&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <output id="messages"></output>
+    <div>
+        <div contenteditable id="input"></div>
+    </div>
+<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script type="text/javascript">
+
+    $.fn.pressEnter = function(fn) {
+
+        return this.each(function() {
+            $(this).bind('enterPress', fn);
+            $(this).keyup(function(e){
+                if(e.keyCode == 13)
+                {
+                    $(this).trigger("enterPress");
+                }
+            })
+        });
+    };
+
+    //use it:
+    $('#input').pressEnter(function(){
+        var $input = $(this);
+        var text = $input.text();
+        $input.text('');
+        RESClient.send(JSON.stringify({type: 'message', data: {text: text}}));
+    });
+
+    var Chat = {
+        onMessage: function(message, dataObject){
+            console.log(message, dataObject);
+            var html = 'Server: ' + message + '<br>';
+            $('#messages').html($('#messages').html() + html);
+        }
+    };
+
+    var RESClient = RESClient || {
+        host: 'carmella.foxcams.ru',
+        port: 8080,
+        connection: {},
+        callbacks: [],
+        send: function(message){
+            var self = this;
+            self.connection.send(JSON.stringify(message));
+        },
+        init: function(){
+            var self = this;
+            // if user is running Mozilla Firefox then use it's built-in WebSocket
+            window.WebSocket = window.WebSocket || window.MozWebSocket;
+
+            this.connection = new WebSocket('ws://' + this.host + ':' + this.port);
+
+            this.connection.onopen = function () {
+                console.log('Realtime Event Server connection is opened and ready to use');
+            };
+
+            this.connection.onerror = function (error) {
+                // an error occurred when sending/receiving data
+                console.log('An error occurred when sending/receiving data', error);
+            };
+
+            this.connection.onmessage = function (message) {
+                try {
+                    var dataObject = JSON.parse(message.data);
+                } catch (e) {
+                    console.log('This doesn\'t look like a valid JSON: ', message.data);
+                    return;
+                }
+                // Handle incoming message in required callbacks
+                for(var i = 0; i < self.callbacks.length; i++){
+                    var callback = self.callbacks[i];
+                    if (typeof callback == 'function'){
+                        callback(message, dataObject);
+                    } else {
+                        console.log('Callback function [' + callback + '] not defined');
+                    }
+                }
+            };
+
+            this.connection.onclose = function(){
+                console.log('Real-time Event Server connection closed');
+                RESClient.init();
+            }
+
+        }
+    };
+
+    RESClient.init();
+    RESClient.callbacks.push(Chat.onMessage);
+
+</script>
+</body>
+</html>
