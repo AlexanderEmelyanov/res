@@ -11,10 +11,28 @@
 }
 /** Fonts - end */
 
+/** Colors */
+.pomegranate{
+    color: #c0392b;
+}
+.nephritis{
+    color: #27ae60;
+}
+.midnight-blue{
+    color: #2c3e50;
+}
+.wet-asphalt{
+    color: #34495e;
+}
+/** /Colors */
+
+
 body{
     background: black;
     color: white;
     font-family: "Input Mono Compressed", "ZeroWidth", monospace !important;
+    font-weight: lighter;
+    font-size: 9pt;
 }
 
 .messages {
