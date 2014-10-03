@@ -1,8 +1,12 @@
 var WebSocketServer = require('ws').Server;
+var server = new WebSocketServer({port: 8080});
 
-var Server = new WebSocketServer({port: 8080});
+//var RealTimeEventServer = require('./res').RealTimeEventServer;
 
-var greetingMessage = {type: 'message', data: {text: 'Welcome to Real-time Events Server'}};
+var RealTimeEventServer = require('./res').RealTimeEventServer;
+var res = new RealTimeEventServer(server);
+
+/*
 
 Server.on('connection', function(ws) {
     console.log('New connection');
@@ -18,3 +22,5 @@ Server.on('connection', function(ws) {
     });
     ws.send(JSON.stringify(greetingMessage));
 });
+    */
+
