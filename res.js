@@ -36,16 +36,44 @@ function RealTimeEventServer(webSocketServer){
      */
     self.onMessage = function (connectionId, message, flags, buffer){
         console.log('Connection #' + connectionId + ' message received', message);
+        try{
+            var event = JSON.parse(message);
+            switch(event.type){
+                case 'message': {
+                    self.sendMessage(connectionId, {type: 'message', data: {text: 'You say: "' + event.data.text + '"'}});
+                    break;
+                }
+                case 'system': {
+                    console.log('Start system message processing');
+                    self.processSystemMessage(connectionId, event);
+                    break;
+                }
+                default: {
+                    console.log('Unknown message type: ' + event.type);
+                }
+            }
+        } catch (e){
+            console.log('Message JSON format is broker: ' + e.message);
+        }
+    };
+
+    /**
+     * @param connectionId Connection ID, which system message received
+     * @param event
+     */
+    self.processSystemMessage = function(connectionId, event){
+        //console.log('Send to connection #' + connectionId + ' message:' + self.info());
+        self.sendMessage(connectionId, {type: 'message', data:{text:self.info()}});
     };
 
     /**
      *
-     * @param connectionId
-     * @param message
+     * @param connectionId int
+     * @param message Object
      */
     self.sendMessage = function(connectionId, message){
         var connection = self.connections[connectionId];
-        connection.send(JSON.stringify(self.greetingMessage));
+        connection.send(JSON.stringify(message));
     };
 
     /**

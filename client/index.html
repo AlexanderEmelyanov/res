@@ -31,7 +31,11 @@
         var $input = $(this);
         var text = $input.text();
         $input.text('');
-        RESClient.send({type: 'message', data: {text: text}});
+        if (text == '/info'){
+            RESClient.send({type: 'system', data: {command: 'info'}});
+        } else {
+            RESClient.send({type: 'message', data: {text: text}});
+        }
     });
 
     var Chat = {
