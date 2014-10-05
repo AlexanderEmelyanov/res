@@ -105,17 +105,32 @@ function RealTimeEventServer(webSocketServer){
             });
         });
 
+        self.detectEnvironment();
+
         console.log('Initialization ended successfully');
+
+        return self;
 
     };
 
-    this.info = function(){
+    self.info = function(){
         return 'Real-time Event Server started at: ' + self.startedAd + '\r\nAccepted connections: ' + (self.connectionsCounter);
     };
 
-    this.init();
+    /**
+     * Detect server environment
+     */
+    self.detectEnvironment = function(){
+        if (typeof process.env.NODE_ENV == 'undefined'){
+            console.log('Process environment undefined.');
+            self.environment = 'development';
+        } else {
+            self.environment = process.env.NODE_ENV;
+        }
+        console.log('Real-time Event Server environment for running: [' + self.environment + ']');
+    };
 
-    return this;
+    return self.init();
 
 }
 
