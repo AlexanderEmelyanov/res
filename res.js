@@ -107,6 +107,8 @@ function RealTimeEventServer(webSocketServer){
 
         self.detectEnvironment();
 
+        self.loadConfiguration();
+
         console.log('Initialization ended successfully');
 
         return self;
@@ -128,6 +130,16 @@ function RealTimeEventServer(webSocketServer){
             self.environment = process.env.NODE_ENV;
         }
         console.log('Real-time Event Server environment for running: [' + self.environment + ']');
+    };
+
+    self.loadConfiguration = function(){
+        var cmnConfig = require('./config/common.js');
+        var envConfig = require('./config/' + self.environment + '.js');
+        var locConfig = require('./config/local.js');
+        var cloner = require('cloneextend');
+        self.config = cloner.cloneextend(cmnConfig, envConfig, locConfig);
+        self.config = cloner.cloneextend(self.config, locConfig);
+        console.log(self.config);
     };
 
     return self.init();
