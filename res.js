@@ -16,12 +16,15 @@ function RealTimeEventServer(webSocketServer){
 
     self.connectionsCounter = 0;
 
+    self.supportedRoles = ['user'];
+
     /**
      * Accept connections
      * @param connection
      */
     self.onConnect = function(connection){
         connection.id = self.connectionsCounter++;
+        connection.roles = {};
         var connectionId = connection.id;
         self.connections[connectionId] = connection;
         console.log('Connection #' + connectionId + ' accepted.');
@@ -62,8 +65,44 @@ function RealTimeEventServer(webSocketServer){
      * @param event
      */
     self.processSystemMessage = function(connectionId, event){
-        //console.log('Send to connection #' + connectionId + ' message:' + self.info());
-        self.sendMessage(connectionId, {type: 'message', data:{text:self.info()}});
+        console.log('System message from connection [' + connectionId + ']. Event: ', event);
+        /* Example event for AUTH command
+        {
+            type: 'system',
+            data: { command: 'login',
+                params: [ 'login', 'customer', 'reskator', 'Xnsdfk' ]
+            }
+        }
+        */
+        switch(event.data.command){
+            case 'info':{
+                self.sendMessage(connectionId, {type: 'message', data:{text:self.info()}});
+                break;
+            }
+            case 'login': {
+                if (event.data.params.length < 3){
+                    // @TODO error handling must be implemented...
+                    return;
+                }
+                var role = event.data.params[1];
+                self.assignRole(connectionId, role);
+                break;
+            }
+            case 'whoami': {
+                var roles = self.getRoles(connectionId);
+                var message = 'Your roles: [' + roles.join(', ') + ']';
+                self.sendMessage(connectionId, {type: 'message', data:{text:message}});
+                break;
+            }
+            default: {
+                // @TODO error handling must be implemented...
+                return;
+            }
+        }
+        // console.log('Send to connection #' + connectionId + ' message:' + self.info());
+        // self.sendMessage(connectionId, {type: 'message', data:{text:self.info()}});
+
+        //  {"type":"system","data":{"command":"auth","params":["auth","customer"]}}
     };
 
     /**
@@ -137,9 +176,52 @@ function RealTimeEventServer(webSocketServer){
         var envConfig = require('./config/' + self.environment + '.js');
         var locConfig = require('./config/local.js');
         var cloner = require('cloneextend');
-        self.config = cloner.cloneextend(cmnConfig, envConfig, locConfig);
+        self.config = cloner.cloneextend(cmnConfig, envConfig);
         self.config = cloner.cloneextend(self.config, locConfig);
         console.log(self.config);
+    };
+
+    /**************************************************************************
+     * Roles management methods ***********************************************
+     **************************************************************************/
+
+    /**
+     * Assign specified role to connection
+     * @param connectionId
+     * @param role
+     */
+    self.assignRole = function(connectionId, role){
+        if (typeof self.connections[connectionId] == 'undefined'){
+            console.log('ERROR: Role assignment failed, required connection ID [' + connectionId + '] not found. May be connection closed...');
+        }
+        self.connections[connectionId]['roles'][role] = 1;
+        console.log('INFO: Role [' + role + '] assigned connection [' + connectionId + ']');
+    };
+
+    /**
+     * Revoke specified role from connection
+     * @param connectionId
+     * @param role
+     */
+    self.revokeRole = function(connectionId, role){
+        if (typeof self.connections[connectionId] == 'undefined'){
+            console.log('ERROR: Role revoking failed, required connection ID [' + connectionId + '] not found. May be connection closed...');
+        }
+        delete self.connections[connectionId]['roles'][role];
+        console.log('Role [' + role + '] revoked from connection [' + connectionId + ']');
+    };
+
+    /**
+     * Return array with connection assigned roles
+     * @param connectionId int
+     * @return Array
+     */
+    self.getRoles = function (connectionId){
+        var roles = [];
+        for(var role in self.connections[connectionId]['roles']){
+            roles.push(role);
+        }
+        return roles;
     };
 
     return self.init();

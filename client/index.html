@@ -31,8 +31,12 @@
         var $input = $(this);
         var text = $input.text();
         $input.text('');
-        if (text == '/info'){
-            RESClient.send({type: 'system', data: {command: 'info'}});
+        // Process system messages, started with '/'
+        if (text.substr(0, 1) == '/'){
+            var argv = text.substr(1, text.length - 1).split(' ');
+            var command = argv[0];
+            var message = {type: 'system', data: {command: command, params: argv}};
+            RESClient.send(message);
         } else {
             RESClient.send({type: 'message', data: {text: text}});
         }
