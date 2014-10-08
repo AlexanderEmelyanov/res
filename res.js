@@ -1,3 +1,6 @@
+var inspect = require('util').inspect;
+var dbClient = require('mariasql');
+
 function RealTimeEventServer(webSocketServer){
 
     // Simple “RealTimeEventServer” instantiation
@@ -17,6 +20,8 @@ function RealTimeEventServer(webSocketServer){
     self.connectionsCounter = 0;
 
     self.supportedRoles = ['user'];
+
+    self.dbClient = new dbClient();
 
     /**
      * Accept connections
@@ -69,8 +74,8 @@ function RealTimeEventServer(webSocketServer){
         /* Example event for AUTH command
         {
             type: 'system',
-            data: { command: 'login',
-                params: [ 'login', 'customer', 'reskator', 'Xnsdfk' ]
+            data: { command: 'auth',
+                params: [ 'auth', 'user', 'reskator', '05a6f1ce941eda5e62d2834efb873db319d488b2' ]
             }
         }
         */
@@ -79,16 +84,18 @@ function RealTimeEventServer(webSocketServer){
                 self.sendMessage(connectionId, {type: 'message', data:{text:self.info()}});
                 break;
             }
-            case 'login': {
+            case 'auth': {
                 if (event.data.params.length < 3){
                     // @TODO error handling must be implemented...
                     return;
                 }
-                var role = event.data.params[1];
-                self.assignRole(connectionId, role);
+                var login = event.data.params[1]
+                    , authKey = event.data.params[2];
+                // self.assignRole(connectionId, role);
+                self.startAuth(connectionId, login, authKey, function(){});
                 break;
             }
-            case 'whoami': {
+            case 'st': {
                 var roles = self.getRoles(connectionId);
                 var message = 'Your roles: [' + roles.join(', ') + ']';
                 self.sendMessage(connectionId, {type: 'message', data:{text:message}});
@@ -99,10 +106,6 @@ function RealTimeEventServer(webSocketServer){
                 return;
             }
         }
-        // console.log('Send to connection #' + connectionId + ' message:' + self.info());
-        // self.sendMessage(connectionId, {type: 'message', data:{text:self.info()}});
-
-        //  {"type":"system","data":{"command":"auth","params":["auth","customer"]}}
     };
 
     /**
@@ -222,6 +225,44 @@ function RealTimeEventServer(webSocketServer){
             roles.push(role);
         }
         return roles;
+    };
+
+    self.startAuth = function(connectionId, login, authKey, callback){
+        console.log('Start authentication for connection [' + connectionId + '] with credentials: [' + login + '/' + authKey + ']');
+        var sql = 'SELECT * FROM foxcams.user WHERE username = \'' + login + '\' AND auth_key = \'' + authKey + '\'';
+        console.log('SQL: [' + sql + ']');
+
+        self.dbClient.connect({
+            host: self.config.db.host,
+            user: self.config.db.user,
+            password: self.config.db.pass
+        });
+
+        self.dbClient.on('connect', function() {
+            console.log('DB client connected');
+        }).on('error', function(err) {
+            console.log('DB client error: ' + err);
+        }).on('close', function(hadError) {
+            console.log('DB client closed');
+        });
+
+        self.dbClient.query(sql)
+            .on('result', function(res) {
+                res.on('row', function(row) {
+                    console.log('Result row: ' + inspect(row));
+                })
+                    .on('error', function(err) {
+                        console.log('Result error: ' + inspect(err));
+                    })
+                    .on('end', function(info) {
+                        console.log('Result finished successfully');
+                    });
+            })
+            .on('end', function() {
+                console.log('Done with all results');
+            });
+
+        self.dbClient.end();
     };
 
     return self.init();
