@@ -1,5 +1,6 @@
 var inspect = require('util').inspect;
 var dbClient = require('mariasql');
+var roomer = require('./roomer.js').Roomer;
 
 function RealTimeEventServer(webSocketServer){
 
@@ -22,6 +23,19 @@ function RealTimeEventServer(webSocketServer){
     self.supportedRoles = ['user'];
 
     self.dbClient = new dbClient();
+
+    self.channelsManager = roomer;
+
+    /**
+     * @type {{}}
+     */
+    self.rolesDictionary = {
+        model: 1,
+        affiliate: 2,
+        agency: 4,
+        businessOwner: 8,
+        customer: 16
+    };
 
     /**
      * Accept connections
@@ -79,32 +93,69 @@ function RealTimeEventServer(webSocketServer){
             }
         }
         */
-        switch(event.data.command){
-            case 'info':{
-                self.sendMessage(connectionId, {type: 'message', data:{text:self.info()}});
-                break;
-            }
-            case 'auth': {
-                if (event.data.params.length < 3){
-                    // @TODO error handling must be implemented...
-                    return;
+        var response = false;
+        try {
+            switch (event.data.command) {
+                case 'info':
+                {
+                    self.sendMessage(connectionId, {type: 'message', data: {text: self.info()}});
+                    break;
                 }
-                var login = event.data.params[1]
-                    , authKey = event.data.params[2];
-                // self.assignRole(connectionId, role);
-                self.startAuth(connectionId, login, authKey, function(){});
-                break;
+                case 'auth':
+                {
+                    if (event.data.params.length < 3) {
+                        // @TODO error handling must be implemented...
+                        return;
+                    }
+                    var login = event.data.params[1], authKey = event.data.params[2];
+                    // self.assignRole(connectionId, role);
+                    self.startAuth(connectionId, login, authKey, function () {
+                    });
+                    break;
+                }
+                case 'room':
+                {
+                    if (event.data.params.length < 2){
+                        throw new Error('Invalid channels manager usage');
+                    }
+                    var channelsManagerCommand = event.data.params[1];
+                    switch(channelsManagerCommand){
+                        case 'list': {
+                            response = 'Channels list: ' + self.channelsManager.getChannelsList().join(', ');
+                            break;
+                        }
+                        case 'create': {
+                            if (event.data.params.length < 3){
+                                throw new Error('Channel creating error: name required');
+                            }
+                            var channelName = event.data.params[2];
+                            self.channelsManager.createChannel(channelName);
+                            break;
+                        }
+                        default: {
+                            throw new Error('Unknown channels manager command: [' + channelsManagerCommand + ']');
+                        }
+                    }
+                    break;
+                }
+                case 'st':
+                {
+                    var roles = self.getRoles(connectionId);
+                    var message = 'Your roles: [' + roles.join(', ') + ']';
+                    self.sendMessage(connectionId, {type: 'message', data: {text: message}});
+                    break;
+                }
+                default:
+                {
+                    throw new Error('Method [' + event.data.command + '] now allowed');
+                }
             }
-            case 'st': {
-                var roles = self.getRoles(connectionId);
-                var message = 'Your roles: [' + roles.join(', ') + ']';
-                self.sendMessage(connectionId, {type: 'message', data:{text:message}});
-                break;
-            }
-            default: {
-                // @TODO error handling must be implemented...
-                return;
-            }
+        } catch (e){
+            console.log('System message handling error: [' + e + ']');
+            response = e;
+        }
+        if (response !== false){
+            self.sendMessage(connectionId, {type: 'message', data: {text: (response + '')}});
         }
     };
 
@@ -150,6 +201,20 @@ function RealTimeEventServer(webSocketServer){
         self.detectEnvironment();
 
         self.loadConfiguration();
+
+        self.dbClient.connect({
+            host: self.config.db.host,
+            user: self.config.db.user,
+            password: self.config.db.pass
+        });
+
+        self.dbClient.on('connect', function() {
+            console.log('DB client connected');
+        }).on('error', function(err) {
+            console.log('DB client error: ' + err);
+        }).on('close', function(hadError) {
+            console.log('DB client closed');
+        });
 
         console.log('Initialization ended successfully');
 
@@ -232,24 +297,18 @@ function RealTimeEventServer(webSocketServer){
         var sql = 'SELECT * FROM foxcams.user WHERE username = \'' + login + '\' AND auth_key = \'' + authKey + '\'';
         console.log('SQL: [' + sql + ']');
 
-        self.dbClient.connect({
-            host: self.config.db.host,
-            user: self.config.db.user,
-            password: self.config.db.pass
-        });
-
-        self.dbClient.on('connect', function() {
-            console.log('DB client connected');
-        }).on('error', function(err) {
-            console.log('DB client error: ' + err);
-        }).on('close', function(hadError) {
-            console.log('DB client closed');
-        });
-
         self.dbClient.query(sql)
             .on('result', function(res) {
                 res.on('row', function(row) {
-                    console.log('Result row: ' + inspect(row));
+                    // console.log('Result row: ' + inspect(row));
+                    var rolesFlag = parseInt(row.role);
+                    var roles = [];
+                    for(var roleValue in self.rolesDictionary){
+                        if (self.rolesDictionary[roleValue] & rolesFlag){
+                            roles.push(roleValue);
+                        }
+                    }
+                    console.log('User roles: [' + roles.join(', ') + ']');
                 })
                     .on('error', function(err) {
                         console.log('Result error: ' + inspect(err));
@@ -261,8 +320,6 @@ function RealTimeEventServer(webSocketServer){
             .on('end', function() {
                 console.log('Done with all results');
             });
-
-        self.dbClient.end();
     };
 
     return self.init();
