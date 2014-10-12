@@ -1,6 +1,6 @@
 var inspect = require('util').inspect;
 var dbClient = require('mariasql');
-var roomer = require('./roomer.js').Roomer;
+var roomer = require('./roomer.js');
 
 function RealTimeEventServer(webSocketServer){
 
@@ -24,7 +24,7 @@ function RealTimeEventServer(webSocketServer){
 
     self.dbClient = new dbClient();
 
-    self.channelsManager = roomer;
+    self.channelsManager = roomer();
 
     /**
      * @type {{}}

@@ -55,4 +55,4 @@ function Roomer() {
 }
 
 
-exports.Roomer = new Roomer();
+module.exports = Roomer;
