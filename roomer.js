@@ -79,6 +79,23 @@ function Roomer() {
     };
 
     /**
+     * Called when user leave a channel. If user leave RES - channel name not required
+     * @param connectionId
+     * @param channelName
+     */
+    self.exit = function(connectionId, channelName){
+        if (channelName){
+            self.unsubscribe(channelName, connectionId);
+        } else {
+            for(var channelName in self.rooms){
+                if (connectionId in self.rooms[channelName].subscribers){
+                    delete self.rooms[channelName].subscribers[connectionId];
+                }
+            }
+        }
+    };
+
+    /**
      * Send message to channel. Will be delivered for all channel subscribers
      * @param channelName
      * @param message object

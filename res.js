@@ -196,6 +196,7 @@ function RealTimeEventServer(webSocketServer){
      * @param connectionId
      */
     self.onDisconnect = function(connectionId){
+        self.channelsManager.exit(connectionId, false);
         delete self.connections[connectionId];
         console.log('Connection #' + connectionId + ' closed');
     };
