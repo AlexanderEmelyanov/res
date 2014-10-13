@@ -124,6 +124,7 @@ function RealTimeEventServer(webSocketServer){
                             self.channelsManager.createChannel(channelName);
                             break;
                         }
+                        case 'join':
                         case 'subscribe': {
                             if (event.data.params.length < 3){
                                 throw new Error('Subscribe error: channel name required');
@@ -132,12 +133,26 @@ function RealTimeEventServer(webSocketServer){
                             self.channelsManager.subscribe(channelName, connectionId);
                             break;
                         }
+                        case 'exit':
                         case 'unsubscribe': {
                             if (event.data.params.length < 3){
                                 throw new Error('Unsubscribe error: channel name required');
                             }
                             var channelName = event.data.params[2];
                             self.channelsManager.unsubscribe(channelName, connectionId);
+                            break;
+                        }
+                        case 'msg': {
+                            if (event.data.params.length < 3){
+                                throw new Error('Channel message sent error: channel name required');
+                            }
+                            if (event.data.params.length < 4){
+                                throw new Error('Channel message sent error: message text required');
+                            }
+                            var channelName = event.data.params[2];
+                            var messageText = event.data.params[3];
+                            var message = {type: 'message', data: {text: messageText}};
+                            self.channelsManager.sendMessage(channelName, message, self.sendMessage);
                             break;
                         }
                         default: {
@@ -152,8 +167,7 @@ function RealTimeEventServer(webSocketServer){
                     self.sendMessage(connectionId, {type: 'message', data: {text: message}});
                     break;
                 }
-                default:
-                {
+                default: {
                     throw new Error('Method [' + event.data.command + '] now allowed');
                 }
             }
@@ -173,6 +187,7 @@ function RealTimeEventServer(webSocketServer){
      */
     self.sendMessage = function(connectionId, message){
         var connection = self.connections[connectionId];
+        console.log('RES::SendMessage to connection [' + connectionId + ']:' + JSON.stringify(message));
         connection.send(JSON.stringify(message));
     };
 
