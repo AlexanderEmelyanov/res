@@ -86,23 +86,16 @@ function RealTimeEventServer(webSocketServer){
     self.processSystemMessage = function(connectionId, event){
         console.log('System message from connection [' + connectionId + ']. Event: ', event);
         /* Example event for AUTH command
-        {
-            type: 'system',
-            data: { command: 'auth',
-                params: [ 'auth', 'user', 'reskator', '05a6f1ce941eda5e62d2834efb873db319d488b2' ]
-            }
-        }
-        */
+        {type: 'system', data: { command: 'auth', params: [ 'auth', 'user', 'reskator', '05a6f1ce941eda5e62d2834efb873db319d488b2' ]}}
+         */
         var response = false;
         try {
             switch (event.data.command) {
-                case 'info':
-                {
+                case 'info': {
                     self.sendMessage(connectionId, {type: 'message', data: {text: self.info()}});
                     break;
                 }
-                case 'auth':
-                {
+                case 'auth': {
                     if (event.data.params.length < 3) {
                         // @TODO error handling must be implemented...
                         return;
@@ -113,8 +106,7 @@ function RealTimeEventServer(webSocketServer){
                     });
                     break;
                 }
-                case 'room':
-                {
+                case 'room': {
                     if (event.data.params.length < 2){
                         throw new Error('Invalid channels manager usage');
                     }
@@ -132,14 +124,29 @@ function RealTimeEventServer(webSocketServer){
                             self.channelsManager.createChannel(channelName);
                             break;
                         }
+                        case 'subscribe': {
+                            if (event.data.params.length < 3){
+                                throw new Error('Subscribe error: channel name required');
+                            }
+                            var channelName = event.data.params[2];
+                            self.channelsManager.subscribe(channelName, connectionId);
+                            break;
+                        }
+                        case 'unsubscribe': {
+                            if (event.data.params.length < 3){
+                                throw new Error('Unsubscribe error: channel name required');
+                            }
+                            var channelName = event.data.params[2];
+                            self.channelsManager.unsubscribe(channelName, connectionId);
+                            break;
+                        }
                         default: {
                             throw new Error('Unknown channels manager command: [' + channelsManagerCommand + ']');
                         }
                     }
                     break;
                 }
-                case 'st':
-                {
+                case 'st': {
                     var roles = self.getRoles(connectionId);
                     var message = 'Your roles: [' + roles.join(', ') + ']';
                     self.sendMessage(connectionId, {type: 'message', data: {text: message}});

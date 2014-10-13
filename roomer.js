@@ -26,28 +26,71 @@ function Roomer() {
 
     /**
      * Create channel with specified owner
-     * @param name
+     * @param channelName
      * @param owner
      */
-    self.createChannel = function (name, owner){
-        if (name in self.rooms){
-            throw new Error('Channel with name[' + name + '] already exist');
+    self.createChannel = function (channelName, owner){
+        if (channelName in self.rooms){
+            throw new Error('Channel [' + channelName + '] already exist');
         }
-        self.rooms[name] = {
-            name: name,
-            owner: owner
+        self.rooms[channelName] = {
+            name: channelName,
+            owner: channelName,
+            subscribers: {}
         };
     };
 
     /**
-     * Return channels objects
+     * Return channels list as ['Channel name 1', 'Channel name 2', etc...]
      */
     self.getChannelsList = function(){
         var channels = [];
-        for(var channel in self.rooms){
-            channels.push(channel);
+        for(var channelName in self.rooms){
+            channels.push(channelName);
         }
         return channels;
+    };
+
+    /**
+     * Subscribe specified connection to channel
+     * @param channelName string
+     * @param connectionId int
+     */
+    self.subscribe = function(channelName, connectionId){
+        if (!(channelName in self.rooms)){
+            throw new Error('Channel [' + channelName + '] not found, subscribe is impossible');
+        }
+        self.rooms[channelName].subscribers[connectionId] = 1;
+    };
+
+    /**
+     * Subscribe specified connection to channel
+     * @param channelName string
+     * @param connectionId int
+     */
+    self.unsubscribe = function(channelName, connectionId){
+        if (!(channelName in self.rooms)){
+            throw new Error('Channel [' + channelName + '] not found, subscribe is impossible');
+        }
+        if (!(connectionId in self.rooms[channelName].subscribers)){
+            throw new Error('User [' + connectionId + '] not subscribed, unsubscribe not required');
+        }
+        delete self.rooms[channelName].subscribers[connectionId];
+    };
+
+    /**
+     * Send message to channel. Will be delivered for all channel subscribers
+     * @param channelName
+     * @param message object
+     * @param callback function
+     */
+    self.sendMessage = function(channelName, message, callback){
+        if (!(channelName in self.rooms)){
+            throw new Error('Channel [' + channelName + '] not found, message sending failed');
+        }
+        for (var connectionId in self.rooms[channelName].subscribers){
+            callback(connectionId, message);
+        }
     };
 
     return this;
