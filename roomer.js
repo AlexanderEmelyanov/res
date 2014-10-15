@@ -41,6 +41,17 @@ function Roomer() {
     };
 
     /**
+     * Delete specified channel
+     * @param channelName
+     */
+    self.deleteChannel = function(channelName){
+        if (!(channelName in self.rooms)){
+            throw new Error('Channel [' + channelName + '] not found and can not be deleted');
+        }
+        delete self.rooms[channelName];
+    };
+
+    /**
      * Return channels list as ['Channel name 1', 'Channel name 2', etc...]
      */
     self.getChannelsList = function(){

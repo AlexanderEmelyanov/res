@@ -52,6 +52,27 @@ function RealTimeEventServer(webSocketServer){
     };
 
     /**
+     * Channel creating events handler
+     * @param channelName
+     */
+    self.onChannelCreate = function(channelName){
+        // Notify all users about new channel
+        for(var connectionId in self.connections){
+            self.sendMessage(connectionId, {type: 'serverEvent', event: 'ChannelCreated', channelName: channelName});
+        }
+    };
+
+    /**
+     * Channel deleting event handler
+     * @param channelName
+     */
+    self.onChannelDelete = function(channelName){
+        for(var connectionId in self.connections){
+            self.sendMessage(connectionId, {type: 'serverEvent', event: 'ChannelDeleted', channelName: channelName});
+        }
+    };
+
+    /**
      * Process all incoming messages
      * @param connectionId
      * @param message
@@ -122,6 +143,16 @@ function RealTimeEventServer(webSocketServer){
                             }
                             var channelName = event.data.params[2];
                             self.channelsManager.createChannel(channelName);
+                            self.onChannelCreate(channelName);
+                            break;
+                        }
+                        case 'delete': {
+                            if (event.data.params.length < 3){
+                                throw new Error('Channel deleting error: name required');
+                            }
+                            var channelName = event.data.params[2];
+                            self.channelsManager.deleteChannel(channelName);
+                            self.onChannelDelete(channelName);
                             break;
                         }
                         case 'join':
